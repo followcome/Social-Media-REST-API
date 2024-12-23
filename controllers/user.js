@@ -1,7 +1,6 @@
 import express from "express";
 import bcrypt from "bcrypt"
 import User from "../models/User.js";
-import { promise } from "bcrypt/promises.js";
 
 //update user
 export const updateUser =async(req,res,next)=>{
@@ -58,19 +57,26 @@ export const follow = async (req,res,next)=>{
     try{
         const userToFollow = await User.findById(req.params.id)
         const currentUser = await User.findById(req.user.id)
-        if(userToFollow.followers.includes(req.user.id)){
-            return res.status(400).json("You already follow this user")
-        }
-        await Promise.all([
-            userToFollow.updateOne({$push:{followers:req.user.id}},
-                currentUser.updateOne({$push:{following:req.params.id}})
-            )
-        ])
-        console.log(currentUser)
-        res.status(200).json("User has been followed successfully");
+        if(!userToFollow.followers.includes(req.user.id))
+            await userToFollow.updateOne({$push:{followers:req.user.id}})
+            await currentUser.updateOne({$push:{followings:req.params.id}})
+            res.status(200).json("User has been followed")
     }catch(err){
         return  res.status(500).json(err)
 
     }
 }
 // unfollow a user
+export const unfollow = async (req,res,next)=>{
+    try{
+        const userToFollow = await User.findById(req.params.id)
+        const currentUser = await User.findById(req.user.id)
+        if(userToFollow.followers.includes(req.user.id))
+            await userToFollow.updateOne({$pull:{followers:req.user.id}})
+            await currentUser.updateOne({$pull:{followings:req.params.id}})
+            res.status(200).json("User has been unfollowed")
+    }catch(err){
+        return  res.status(500).json(err)
+
+    }
+}
